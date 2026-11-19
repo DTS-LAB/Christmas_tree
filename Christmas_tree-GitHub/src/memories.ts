@@ -36,9 +36,21 @@ export function makeMemories(): MemoryPhoto[] {
 export async function readPhoto(file: File): Promise<MemoryPhoto> {
   if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) throw new Error('请选择 JPG、PNG 或 WebP 图片');
   if (file.size > 20 * 1024 * 1024) throw new Error('单张照片请小于 20 MB');
-  const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, 900 / Math.max(bitmap.width, bitmap.height));
-  const canvas = document.createElement('canvas'); canvas.width = Math.round(bitmap.width * scale); canvas.height = Math.round(bitmap.height * scale);
-  canvas.getContext('2d')!.drawImage(bitmap, 0, 0, canvas.width, canvas.height); bitmap.close();
-  return { id: crypto.randomUUID(), src: canvas.toDataURL('image/jpeg', .83), caption: file.name.replace(/\.[^.]+$/, '').slice(0, 40) };
+  const url = URL.createObjectURL(file);
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const element = new Image();
+      element.onload = () => resolve(element);
+      element.onerror = () => reject(new Error('照片无法读取，请换一张试试'));
+      element.src = url;
+    });
+    const scale = Math.min(1, 900 / Math.max(image.naturalWidth, image.naturalHeight));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(image.naturalWidth * scale);
+    canvas.height = Math.round(image.naturalHeight * scale);
+    canvas.getContext('2d')!.drawImage(image, 0, 0, canvas.width, canvas.height);
+    return { id: crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`, src: canvas.toDataURL('image/jpeg', .83), caption: file.name.replace(/\.[^.]+$/, '').slice(0, 40) };
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
