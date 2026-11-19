@@ -3,6 +3,7 @@ import type { ErrorInfo, ReactNode } from 'react';
 import { ArrowUpRight, Check, ChevronRight, Expand, ImagePlus, Maximize2, Minus, Pause, Play, Plus, RotateCcw, Sparkles, WandSparkles, X } from 'lucide-react';
 import { makeMemories, readPhoto } from './memories';
 import type { MemoryPhoto } from './memories';
+import MobileScene from './MobileScene';
 const TreeScene = lazy(() => import('./TreeScene'));
 const STORAGE_KEY = 'evergreen-memories-v1';
 
@@ -19,9 +20,11 @@ export default function App() {
   const [gallery, setGallery] = useState(false), [selected, setSelected] = useState<MemoryPhoto | null>(null), [toast, setToast] = useState('');
   const [uploading, setUploading] = useState(false), [fullscreen, setFullscreen] = useState(false), [sceneKey, setSceneKey] = useState(0);
   const [reducedMotion, setReducedMotion] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const [mobileScene, setMobileScene] = useState(() => window.matchMedia('(max-width: 760px)').matches || /iPhone|iPad|iPod|Android|MicroMessenger/i.test(navigator.userAgent));
   const fileInput = useRef<HTMLInputElement>(null), galleryButton = useRef<HTMLButtonElement>(null), modal = useRef<HTMLDivElement>(null), previousFocus = useRef<HTMLElement | null>(null);
   const displayPhotos = photos.length ? photos : demos;
   useEffect(() => { const media = window.matchMedia('(prefers-reduced-motion: reduce)'); const change = () => setReducedMotion(media.matches); media.addEventListener('change', change); return () => media.removeEventListener('change', change); }, []);
+  useEffect(() => { const media = window.matchMedia('(max-width: 760px)'); const change = () => setMobileScene(media.matches || /iPhone|iPad|iPod|Android|MicroMessenger/i.test(navigator.userAgent)); media.addEventListener('change', change); return () => media.removeEventListener('change', change); }, []);
   useEffect(() => { if (!toast) return; const timer = window.setTimeout(() => setToast(''), 4200); return () => window.clearTimeout(timer); }, [toast]);
   useEffect(() => { const change = () => setFullscreen(Boolean(document.fullscreenElement)); document.addEventListener('fullscreenchange', change); return () => document.removeEventListener('fullscreenchange', change); }, []);
   useEffect(() => {
@@ -60,7 +63,8 @@ export default function App() {
     </header>
     <section className="experience" aria-label="互动圣诞树">
       <div className="scene-container" role="img" aria-label="由祖母绿粒子、金色彩球、礼物与拍立得照片组成的可旋转三维圣诞树">
-        <SceneBoundary><Suspense fallback={<div className="scene-loading"><Sparkles className="loading-star" size={30} /><p>正在点亮你的圣诞树…</p></div>}><TreeScene key={sceneKey} scattered={scattered} rotating={rotating} glow={glow} photos={displayPhotos} onPhoto={p => { setSelected(p); setRotating(false); }} reducedMotion={reducedMotion} /></Suspense></SceneBoundary>
+        {mobileScene ? <MobileScene key={sceneKey} scattered={scattered} rotating={rotating} glow={glow} photos={displayPhotos} onPhoto={p => { setSelected(p); setRotating(false); }} reducedMotion={reducedMotion} /> :
+          <SceneBoundary><Suspense fallback={<div className="scene-loading"><Sparkles className="loading-star" size={30} /><p>正在点亮你的圣诞树…</p></div>}><TreeScene key={sceneKey} scattered={scattered} rotating={rotating} glow={glow} photos={displayPhotos} onPhoto={p => { setSelected(p); setRotating(false); }} reducedMotion={reducedMotion} /></Suspense></SceneBoundary>}
       </div>
       <div className="scene-vignette" />
       <div className="hero-copy">
@@ -79,7 +83,7 @@ export default function App() {
       </div>
       <div className="scene-caption"><span className="status-dot" /><span>{scattered ? 'STARDUST / 星光漫游' : 'EVERGREEN / 星光成树'}</span></div>
       <div className="tree-note"><span>✦</span><p>May your days<br /><em>be merry & bright.</em></p></div>
-      <div className="scene-instructions"><span className="mouse-icon" /> 拖动旋转 <span>·</span> 滚轮缩放 <span>·</span> 点击照片查看</div>
+      <div className="scene-instructions"><span className="mouse-icon" /> {mobileScene ? '拖动转动' : '拖动旋转 · 滚轮缩放'} <span>·</span> 点击照片查看</div>
       <div className="control-dock">
         <div className="state-control" role="group" aria-label="树的形态"><button className={!scattered ? 'active' : ''} aria-pressed={!scattered} onClick={() => setScattered(false)}><Sparkles size={15} /> 聚合成树</button><button className={scattered ? 'active' : ''} aria-pressed={scattered} onClick={() => setScattered(true)}><Expand size={15} /> 混沌散落</button></div>
         <span className="dock-divider" />
